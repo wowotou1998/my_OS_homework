@@ -1,0 +1,67 @@
+/* Simple linker script for the JOS kernel.
+   See the GNU ld 'info' manual ("info ld") to learn the syntax. */
+
+OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
+OUTPUT_ARCH(i386)
+/*设置程序入口点为entry.S中的_start */
+
+ENTRY(_start)
+
+SECTIONS
+{
+	/* Link the kernel at this address: "." means the current address 
+	当前地址会随着链接器的链接慢慢增长*/
+	. = 0xF0100000;
+
+	/* AT(...) gives the load address of this section, which tells
+	   the boot loader where to load the kernel in physical memory */
+	  /*将目标文件中所有.text .stub .text.* .gnu.linkonce.t.*段内容放入最终
+	  可执行文件ELF中的Text段中，以此类推，一个段接着一个段*/
+	.text : AT(0x100000) {
+		*(.text .stub .text.* .gnu.linkonce.t.*)
+	}
+
+	PROVIDE(etext = .);	/* Define the 'etext' symbol to this value */
+
+	.rodata : {
+		*(.rodata .rodata.* .gnu.linkonce.r.*)
+	}
+
+	/* Include debugging information in kernel memory; stab means Symbol Table */
+	.stab : {
+		PROVIDE(__STAB_BEGIN__ = .);
+		*(.stab);
+		PROVIDE(__STAB_END__ = .);
+		BYTE(0)		/* Force the linker to allocate space
+				   for this section */
+	}
+
+	.stabstr : {
+		PROVIDE(__STABSTR_BEGIN__ = .);
+		*(.stabstr);
+		PROVIDE(__STABSTR_END__ = .);
+		BYTE(0)		/* Force the linker to allocate space
+				   for this section */
+	}
+
+	/* Adjust the address for the data segment to the next page */
+	. = ALIGN(0x1000);
+
+	/* The data segment */
+	.data : {
+		*(.data .data.*)
+	}
+
+	.bss : {
+		PROVIDE(edata = .);
+		*(.dynbss)
+		*(.bss .bss.*)
+		*(COMMON)
+		PROVIDE(end = .);
+	}
+	/*end　is a flag which represent the BSS segment's end*/
+
+/DISCARD/ : {
+		*(.eh_frame .note.GNU-stack .comment .note)
+	}
+}
